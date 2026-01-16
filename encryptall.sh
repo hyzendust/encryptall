@@ -1,6 +1,5 @@
 #!/bin/bash
 
-cd "$(dirname "$0")"
 mkdir -p Encrypted
 
 echo -n "Enter password: "
@@ -11,7 +10,7 @@ PASSFILE=$(mktemp)
 echo "$PASSWORD" > "$PASSFILE"
 
 for file in *; do
-    if [ -f "$file" ] && [ "$file" != "Encrypted" ] && [ "$file" != "encryptall.sh" ]; then
+    if [ -f "$file" ] && [ "$file" != "Encrypted" ] && [ "$file" != "encryptall.sh" ] && [ "$file" != "encryptall" ]; then
         # Check if already encrypted previously
         if [ -f "Encrypted/${file}.gpg" ]; then
             echo "Skipping (already encrypted): $file"
