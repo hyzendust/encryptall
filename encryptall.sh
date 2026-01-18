@@ -9,40 +9,48 @@ echo ""
 PASSFILE=$(mktemp)
 echo "$PASSWORD" > "$PASSFILE"
 
+# Recursive encrypt function
+encrypt_recursive() {
+    local source_dir="$1"
+    local encrypted_base="$2"
+    
+    for item in "$source_dir"/*; do
+        [ -e "$item" ] || continue
+        
+        local rel_path="${item#./}"
+        
+        if [ -d "$item" ]; then
+            mkdir -p "$encrypted_base/$rel_path"
+            echo "Created directory: $rel_path/"
+            encrypt_recursive "$item" "$encrypted_base"
+        elif [ -f "$item" ]; then
+            # Check if already encrypted previously
+            if [ -f "$encrypted_base/${rel_path}.gpg" ]; then
+                echo "Skipping (already encrypted): $rel_path"
+            else
+                echo "Encrypting: $rel_path"
+                mkdir -p "$(dirname "$encrypted_base/${rel_path}.gpg")"
+                gpg --batch --yes --passphrase-file "$PASSFILE" --symmetric --cipher-algo AES256 -o "$encrypted_base/${rel_path}.gpg" "$item"
+                if [ $? -eq 0 ]; then
+                    echo "✓ Success: $rel_path"
+                else
+                    echo "✗ Failed: $rel_path"
+                fi
+            fi
+        fi
+    done
+}
+
 for item in *; do
-    # Skip the Encrypted folder and the script itself
     if [ "$item" = "Encrypted" ] || [ "$item" = "encryptall.sh" ] || [ "$item" = "encryptall" ]; then
         continue
     fi
     
-    # For folders, archive first
     if [ -d "$item" ]; then
-        archive_name="${item}.tar.xz"
-        # Check if already encrypted previously
-        if [ -f "Encrypted/${archive_name}.gpg" ]; then
-            echo "Skipping (already encrypted): $item/ (folder)"
-        else
-            echo "Archiving folder: $item/"
-            tar -cJf "$archive_name" "$item"
-            
-            if [ $? -eq 0 ]; then
-                echo "Encrypting archive: $archive_name"
-                gpg --batch --yes --passphrase-file "$PASSFILE" --symmetric --cipher-algo AES256 -o "Encrypted/${archive_name}.gpg" "$archive_name"
-                
-                if [ $? -eq 0 ]; then
-                    echo "✓ Success: $item/ (folder)"
-                    # Remove the temporary archive file
-                    rm -f "$archive_name"
-                else
-                    echo "✗ Failed to encrypt: $archive_name"
-                fi
-            else
-                echo "✗ Failed to archive: $item/"
-            fi
-        fi
-    # For files
+        mkdir -p "Encrypted/$item"
+        echo "Processing directory: $item/"
+        encrypt_recursive "$item" "Encrypted"
     elif [ -f "$item" ]; then
-        # Check if already encrypted previously
         if [ -f "Encrypted/${item}.gpg" ]; then
             echo "Skipping (already encrypted): $item"
         else
