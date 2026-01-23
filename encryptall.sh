@@ -1,10 +1,27 @@
 #!/bin/bash
 
+# Parse command line arguments
+while getopts "p:" opt; do
+    case $opt in
+        p)
+            PASSWORD="$OPTARG"
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            echo "Usage: $0 [-p password]"
+            exit 1
+            ;;
+    esac
+done
+
 mkdir -p Encrypted
 
-echo -n "Enter password: "
-read PASSWORD
-echo ""
+# If password not provided via flag, prompt for it
+if [ -z "$PASSWORD" ]; then
+    echo -n "Enter password: "
+    read PASSWORD
+    echo ""
+fi
 
 PASSFILE=$(mktemp)
 echo "$PASSWORD" > "$PASSFILE"
